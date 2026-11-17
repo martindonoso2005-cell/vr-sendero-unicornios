@@ -16,7 +16,7 @@ Entorno virtual 360° interactivo hecho con [A-Frame](https://aframe.io) 1.7. Cu
 
 - **Escritorio:** arrastra para mirar, WASD para caminar (limitado al centro), clic en una esfera o teclas 1–4.
 - **Visor VR (Quest, etc.):** botón VR, apunta con el láser de cualquier mando y pulsa el gatillo.
-- **Móvil / Cardboard:** mira fijo una esfera 1,5 s (cursor por mirada).
+- **Mirada (gaze) — cualquier dispositivo, incluido Cardboard:** apunta la retícula del centro a un portal; el aro se llena en 1,8 s y te teletransporta a ese mundo. El portal del mundo actual queda marcado con un anillo dorado y no se puede seleccionar.
 
 ## Ejecutar en local
 

@@ -19,10 +19,10 @@
 <body>
   <div id="ayuda">
     <b>Sendero de Unicornios VR</b><br>
-    Arrastra para mirar · WASD para caminar · haz clic (o mira fijo) en una esfera para cambiar de mundo · teclas 1-4 · botón VR abajo a la derecha.
+    Arrastra para mirar · WASD para caminar · mira fijo un portal (o haz clic) para cambiar de mundo · teclas 1-4 · botón VR abajo a la derecha.
   </div>
 
-  <a-scene cursor="rayOrigin: mouse" raycaster="objects: .clickable"
+  <a-scene cursor="rayOrigin: mouse; fuse: false" raycaster="objects: .portal"
            renderer="colorManagement: true; antialias: true" loading-screen="dotsColor: #ff8ad8; backgroundColor: #2a1a4a"
            gestor-mundos>
     <a-assets timeout="20000">
@@ -55,17 +55,16 @@
     <!-- Usuario -->
     <a-entity id="rig" movement-bounds>
       <a-entity id="camara" camera look-controls="pointerLockEnabled: false" wasd-controls="acceleration: 25" position="0 1.6 0">
-        <!-- cursor por mirada (fuse) para visores sin controles -->
-        <a-entity cursor="fuse: true; fuseTimeout: 1500" raycaster="objects: .clickable; far: 20"
-                  position="0 0 -1" geometry="primitive: ring; radiusInner: 0.012; radiusOuter: 0.018"
-                  material="color: #ffffff; shader: flat; opacity: 0.85"
-                  animation__fuse="property: scale; startEvents: fusing; from: 1 1 1; to: 0.3 0.3 0.3; dur: 1500; easing: linear"
-                  animation__reset="property: scale; startEvents: mouseleave; to: 1 1 1; dur: 150"></a-entity>
+        <!-- Reticula de mirada (gaze): mira fijo un portal 1.8 s y te teletransporta a ese mundo -->
+        <a-entity id="reticula" position="0 0 -1"
+                  cursor="fuse: true; fuseTimeout: 1800; rayOrigin: entity"
+                  raycaster="objects: .portal; far: 30; interval: 60"
+                  reticula-gaze></a-entity>
         <!-- velo para la transicion entre mundos -->
         <a-entity id="velo" geometry="primitive: sphere; radius: 0.3" material="color: #fff; shader: flat; side: back; transparent: true; opacity: 0" visible="false"></a-entity>
       </a-entity>
-      <a-entity laser-controls="hand: left" raycaster="objects: .clickable; far: 20; lineColor: #ff9ad8; lineOpacity: 0.8"></a-entity>
-      <a-entity laser-controls="hand: right" raycaster="objects: .clickable; far: 20; lineColor: #9ad8ff; lineOpacity: 0.8"></a-entity>
+      <a-entity laser-controls="hand: left" raycaster="objects: .portal; far: 20; lineColor: #ff9ad8; lineOpacity: 0.8"></a-entity>
+      <a-entity laser-controls="hand: right" raycaster="objects: .portal; far: 20; lineColor: #9ad8ff; lineOpacity: 0.8"></a-entity>
     </a-entity>
   </a-scene>
 </body>

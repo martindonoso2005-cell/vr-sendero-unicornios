@@ -34,6 +34,8 @@ AFRAME.registerComponent('gestor-mundos', {
       titulo.setAttribute('text', 'color', m.color);
       this.actual = indice;
       document.querySelectorAll('[esfera-mundo]').forEach(s => s.components['esfera-mundo'].marcar(indice));
+      // los raycasters deben enterarse de que cambiaron los portales seleccionables
+      document.querySelectorAll('[raycaster]').forEach(r => r.components.raycaster.refreshObjects());
       velo.setAttribute('animation__out', { property: 'material.opacity', from: 1, to: 0, dur: 650, easing: 'easeOutQuad' });
       setTimeout(() => { velo.setAttribute('visible', false); this.ocupado = false; }, 700);
     }, 470);
@@ -56,7 +58,6 @@ AFRAME.registerComponent('esfera-mundo', {
     this.bola = document.createElement('a-entity');
     this.bola.setAttribute('geometry', 'primitive: sphere; radius: 0.32; segmentsWidth: 48; segmentsHeight: 32');
     this.bola.setAttribute('material', `shader: flat; src: ${d.textura}`);
-    this.bola.classList.add('clickable');
     this.bola.setAttribute('animation__giro', 'property: rotation; to: 0 360 0; loop: true; dur: 24000; easing: linear');
     this.bola.setAttribute('animation__flotar',
       `property: position; from: 0 -0.04 0; to: 0 0.04 0; dir: alternate; loop: true; dur: ${2200 + d.mundo * 300}; easing: easeInOutSine`);
@@ -88,22 +89,95 @@ AFRAME.registerComponent('esfera-mundo', {
     el.appendChild(fondo);
     el.appendChild(txt);
 
-    // interaccion
-    this.bola.addEventListener('mouseenter', () => {
+    // vortice que gira mientras se "carga" el portal con la mirada
+    this.vortice = document.createElement('a-entity');
+    this.vortice.setAttribute('geometry', 'primitive: ring; radiusInner: 0.37; radiusOuter: 0.44; thetaLength: 300; segmentsTheta: 48');
+    this.vortice.setAttribute('material', 'shader: flat; color: #ff9ad8; transparent: true; opacity: 0.85; side: double');
+    this.vortice.setAttribute('visible', false);
+    this.vortice.setAttribute('animation__girar', 'property: rotation; from: 0 0 0; to: 0 0 -360; loop: true; dur: 900; easing: linear');
+    el.appendChild(this.vortice);
+
+    // interaccion: varios cursores (raton, mirada, laseres) pueden apuntar a la vez
+    this.cursores = new Set();
+    if (d.mundo !== 0) this.bola.classList.add('portal'); // el mundo 0 es el inicial
+    this.bola.addEventListener('mouseenter', e => {
+      this.cursores.add(e.detail && e.detail.cursorEl);
       this.bola.setAttribute('animation__hover', 'property: scale; to: 1.18 1.18 1.18; dur: 200; easing: easeOutQuad');
       this.halo.setAttribute('material', 'opacity', 0.3);
     });
-    this.bola.addEventListener('mouseleave', () => {
+    this.bola.addEventListener('mouseleave', e => {
+      this.cursores.delete(e.detail && e.detail.cursorEl);
+      if (e.detail && e.detail.cursorEl && e.detail.cursorEl.id === 'reticula') this.cargando(false);
+      if (this.cursores.size) return;
       this.bola.setAttribute('animation__hover', 'property: scale; to: 1 1 1; dur: 200; easing: easeOutQuad');
       this.halo.setAttribute('material', 'opacity', 0.12);
     });
+    // "fusing": la reticula empezo la cuenta de mirada fija sobre este portal
+    this.bola.addEventListener('fusing', () => this.cargando(true));
     this.bola.addEventListener('click', () => {
+      this.cargando(false);
+      if (!this.bola.classList.contains('portal')) return;
       el.sceneEl.emit('cambiar-mundo', { mundo: d.mundo });
     });
   },
 
+  cargando(activo) {
+    const dur = (document.getElementById('reticula').getAttribute('cursor') || {}).fuseTimeout || 1800;
+    this.vortice.setAttribute('visible', activo);
+    if (activo) {
+      this.vortice.setAttribute('animation__crecer', `property: scale; from: 0.6 0.6 0.6; to: 1.15 1.15 1.15; dur: ${dur}; easing: easeInQuad`);
+      this.halo.setAttribute('animation__brillo', `property: material.opacity; from: 0.2; to: 0.6; dur: ${dur}; easing: easeInQuad`);
+    } else {
+      this.vortice.removeAttribute('animation__crecer');
+      this.halo.removeAttribute('animation__brillo');
+    }
+  },
+
+  // el portal del mundo actual queda marcado y deja de ser seleccionable
   marcar(indice) {
-    this.anillo.setAttribute('visible', indice === this.data.mundo);
+    const actual = indice === this.data.mundo;
+    this.anillo.setAttribute('visible', actual);
+    this.bola.classList.toggle('portal', !actual);
+    this.cargando(false);
+    this.cursores.clear();
+    this.bola.setAttribute('animation__hover', 'property: scale; to: 1 1 1; dur: 200; easing: easeOutQuad');
+    this.halo.setAttribute('material', 'opacity', 0.12);
+  }
+});
+
+/* Reticula de mirada: punto central + aro que se llena mientras miras fijo un portal. */
+AFRAME.registerComponent('reticula-gaze', {
+  init() {
+    const el = this.el;
+    const add = (geo, mat) => {
+      const e = document.createElement('a-entity');
+      e.setAttribute('geometry', geo);
+      e.setAttribute('material', 'shader: flat; transparent: true; depthTest: false; ' + mat);
+      e.object3D.renderOrder = 999;
+      el.appendChild(e);
+      return e;
+    };
+    this.punto = add('primitive: circle; radius: 0.005; segments: 16', 'color: #ffffff; opacity: 0.95');
+    this.base = add('primitive: ring; radiusInner: 0.014; radiusOuter: 0.02; segmentsTheta: 48', 'color: #ffffff; opacity: 0.45');
+    this.progreso = add('primitive: ring; radiusInner: 0.014; radiusOuter: 0.02; segmentsTheta: 48; thetaStart: 90; thetaLength: 0.01',
+      'color: #ff6fc8; opacity: 1');
+    this.inicio = null;
+
+    el.addEventListener('mouseenter', () => el.setAttribute('animation__z', 'property: scale; to: 1.5 1.5 1.5; dur: 150'));
+    el.addEventListener('mouseleave', () => { this.reset(); el.setAttribute('animation__z', 'property: scale; to: 1 1 1; dur: 150'); });
+    el.addEventListener('fusing', () => { this.inicio = performance.now(); });
+    el.addEventListener('click', () => this.reset());
+  },
+  reset() {
+    this.inicio = null;
+    this.progreso.setAttribute('geometry', 'thetaLength', 0.01);
+  },
+  tick() {
+    if (this.inicio === null) return;
+    const dur = this.el.getAttribute('cursor').fuseTimeout;
+    const t = Math.min(1, (performance.now() - this.inicio) / dur);
+    // en sentido horario desde arriba
+    this.progreso.setAttribute('geometry', { thetaStart: 90 - 360 * t, thetaLength: Math.max(0.01, 360 * t) });
   }
 });
 
