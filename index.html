@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Sendero de Unicornios VR</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="Entorno de realidad virtual 360 con A-Frame: cuatro mundos de un sendero con unicornios.">
+  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+  <script src="js/componentes.js"></script>
+  <style>
+    #ayuda {
+      position: fixed; left: 12px; bottom: 12px; z-index: 10; max-width: 340px;
+      font: 13px/1.4 system-ui, sans-serif; color: #fff; background: rgba(30, 20, 60, .65);
+      padding: 10px 14px; border-radius: 10px; pointer-events: none;
+    }
+    #ayuda b { color: #ffd6f0; }
+  </style>
+</head>
+<body>
+  <div id="ayuda">
+    <b>Sendero de Unicornios VR</b><br>
+    Arrastra para mirar · WASD para caminar · haz clic (o mira fijo) en una esfera para cambiar de mundo · teclas 1-4 · botón VR abajo a la derecha.
+  </div>
+
+  <a-scene cursor="rayOrigin: mouse" raycaster="objects: .clickable"
+           renderer="colorManagement: true; antialias: true" loading-screen="dotsColor: #ff8ad8; backgroundColor: #2a1a4a"
+           gestor-mundos>
+    <a-assets timeout="20000">
+      <img id="pano-dia" src="assets/panoramas/dia_arcoiris.jpg" crossorigin="anonymous">
+      <img id="pano-atardecer" src="assets/panoramas/atardecer_magico.jpg" crossorigin="anonymous">
+      <img id="pano-noche" src="assets/panoramas/noche_estrellada.jpg" crossorigin="anonymous">
+      <img id="pano-pastel" src="assets/panoramas/bosque_algodon_pastel.jpg" crossorigin="anonymous">
+    </a-assets>
+
+    <!-- Esfera envolvente: la imagen equirectangular se proyecta en su cara interior -->
+    <a-entity id="entorno"
+              geometry="primitive: sphere; radius: 120; segmentsWidth: 96; segmentsHeight: 48"
+              material="shader: flat; side: back; src: #pano-dia; npot: true"
+              scale="-1 1 1" rotation="0 -90 0"></a-entity>
+
+    <!-- Selector de mundos: cuatro esferas texturizadas con cada panorama -->
+    <a-entity id="selector" position="0 1.35 -2.2">
+      <a-entity esfera-mundo="mundo: 0; textura: #pano-dia; nombre: Dia arcoiris"        position="-1.35 0 0.35"></a-entity>
+      <a-entity esfera-mundo="mundo: 1; textura: #pano-atardecer; nombre: Atardecer magico" position="-0.45 0.12 0"></a-entity>
+      <a-entity esfera-mundo="mundo: 2; textura: #pano-noche; nombre: Noche estrellada"   position="0.45 0.12 0"></a-entity>
+      <a-entity esfera-mundo="mundo: 3; textura: #pano-pastel; nombre: Bosque pastel"     position="1.35 0 0.35"></a-entity>
+    </a-entity>
+
+    <a-entity id="titulo" position="0 2.35 -2.6"
+              text="value: Sendero de Unicornios; align: center; width: 4; color: #ffffff; shader: msdf; font: https://cdn.aframe.io/examples/ui/Viga-Regular.json"></a-entity>
+
+    <!-- Destellos magicos flotando alrededor del usuario -->
+    <a-entity destellos="cantidad: 70; radio: 7"></a-entity>
+
+    <!-- Usuario -->
+    <a-entity id="rig" movement-bounds>
+      <a-entity id="camara" camera look-controls="pointerLockEnabled: false" wasd-controls="acceleration: 25" position="0 1.6 0">
+        <!-- cursor por mirada (fuse) para visores sin controles -->
+        <a-entity cursor="fuse: true; fuseTimeout: 1500" raycaster="objects: .clickable; far: 20"
+                  position="0 0 -1" geometry="primitive: ring; radiusInner: 0.012; radiusOuter: 0.018"
+                  material="color: #ffffff; shader: flat; opacity: 0.85"
+                  animation__fuse="property: scale; startEvents: fusing; from: 1 1 1; to: 0.3 0.3 0.3; dur: 1500; easing: linear"
+                  animation__reset="property: scale; startEvents: mouseleave; to: 1 1 1; dur: 150"></a-entity>
+        <!-- velo para la transicion entre mundos -->
+        <a-entity id="velo" geometry="primitive: sphere; radius: 0.3" material="color: #fff; shader: flat; side: back; transparent: true; opacity: 0" visible="false"></a-entity>
+      </a-entity>
+      <a-entity laser-controls="hand: left" raycaster="objects: .clickable; far: 20; lineColor: #ff9ad8; lineOpacity: 0.8"></a-entity>
+      <a-entity laser-controls="hand: right" raycaster="objects: .clickable; far: 20; lineColor: #9ad8ff; lineOpacity: 0.8"></a-entity>
+    </a-entity>
+  </a-scene>
+</body>
+</html>
